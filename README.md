@@ -3,8 +3,6 @@
 1. Create React Application
 ```Bash
 git clone https://github.com/ToanBm/analog.git
-```
-```Bash
 cd analog
 ```
 2. Install Required Packages
