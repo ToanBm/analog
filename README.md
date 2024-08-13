@@ -19,7 +19,7 @@ How to find SESSION KEY?
 - Paste to your App.js file
 4. Start the app
 ```Bash
-npm startt
+npm start
 ```
 
 ## Thank you!
