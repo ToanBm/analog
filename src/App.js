@@ -1,173 +1,102 @@
-import React, { useEffect, useState } from "react";
-import { TimegraphClient } from "@analog-labs/timegraph-js";
-import { web3Enable } from "@polkadot/extension-dapp";
+import { web3Enable } from '@polkadot/extension-dapp';
+import { TimegraphClient } from '@analog-labs/timegraph-js';
+import './App.css';
+import { useEffect, useState } from 'react';
 
-const sessionKey = "your_session_key"; // replace your_session_key with your session key
-const timegraphGraphqlUrl = "https://timegraph.testnet.analog.one/graphql";
+const CONFIG = {
+  identifier:
+    "SELECT a._clock, a._index, a.name FROM   '{NININI_name()}' AS a ORDER BY a._clock DESC",
+  fields: ["_clock"],
+};
 
-async function watchSDKTesting(setData, setAliasResponse, name, hashId) {
-  await web3Enable("abcd");
+async function init() {
+ 
+}
 
-  const client = new TimegraphClient({
-    url: timegraphGraphqlUrl,
-    sessionKey: sessionKey,
+async function initialQuery(name, hashId, setData, setLoading, setFund) {
+  setLoading(true);
+  await web3Enable(name);
+  const timeGraphClient = new TimegraphClient({
+    url: "https://timegraph.testnet.analog.one/graphql", // A url to Watch GraphQL instance.
+    // Session key created by user wallet using WASM SDK
+    sessionKey:
+      "your-section-key",
   });
 
-  let aliasResponse = await client.alias.add({
-    name: name,
+  const fund  = await timeGraphClient.tokenomics.sponsorView({
+    viewName: name,
+    amount: "500000000"
+  })
+
+  setFund(fund);
+  const aliasResponse = await timeGraphClient.alias.add({
     hashId: hashId,
-    identifier: name,
+    name: name,
+    identifier: CONFIG.identifier,
   });
-
-  console.log(aliasResponse);
-  setAliasResponse(aliasResponse);
-
-  const data = await client.view.data({
+  console.log("aliasResponse", aliasResponse);
+ 
+  const response = await timeGraphClient.view.data({
     _name: name,
     hashId: hashId,
-    fields: ["_index"],
-    limit: 10,
+    fields: [...CONFIG.fields],
+    limit: 10
   });
-
-  setData(data);
+  console.log('response', response);
+  setData({status: aliasResponse?.status, view: response});
+  setLoading(false);
 }
 
 function App() {
-  const [data, setData] = useState(null);
-  const [aliasResponse, setAliasResponse] = useState(null);
-  const [name, setName] = useState("");
-  const [hashId, setHashId] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    watchSDKTesting(setData, setAliasResponse, name, hashId);
-  };
-
+  const [name, setName] = useState('');
+  const [hashId, setHashId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fund, setFund] = useState('');
+  const [data, setData] = useState({status: '', view: []});
+  useEffect(() => {
+    init();
+  }, [])
   return (
-    <div style={containerStyle}>
-      <h1 style={headerStyle}>Analog - Query a Unique View</h1>
+    <div className="App">
+       <div className='container'>
+          <div className='form'>
+          <div className='input'>
+            <label>Name View:</label>
+            <input onChange={(e) => setName(e.target.value)} onInput={(e) => setName(e.target.value)}/>
+          </div>
+          <div className='input'>
+            <label>HashId: </label>
+            <input onChange={(e) => setHashId(e.target.value)} onInput={(e) => setHashId(e.target.value)}/>
+          </div>
+          <button disabled={loading} className='button' onClick={() => initialQuery(name, hashId, setData, setLoading, setFund)}>
+            {
+              loading ? "Quering..." : "Query"
+            } 
+            </button>
+          </div>
+          <div className="result">
+          <div>
+              <p>Fund:</p>
+              <div>
+                {
+                  <p>{JSON.stringify(fund)}</p>
+                }
+              </div>
+            </div>
+            <p>Status: {data.status}</p>
+            <div>
+              <p>View:</p>
+              <div>
+                {
+                  <p>{JSON.stringify(data.view)}</p>
+                }
+              </div>
+            </div>
+        </div>
+        </div>
 
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <div style={inputContainerStyle}>
-          <label style={labelStyle}>
-            Name:
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </label>
-        </div>
-        <div style={inputContainerStyle}>
-          <label style={labelStyle}>
-            Hash ID:
-            <input
-              type="text"
-              value={hashId}
-              onChange={(e) => setHashId(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </label>
-        </div>
-        <button type="submit" style={buttonStyle}>
-          Submit
-        </button>
-      </form>
-
-      {aliasResponse && (
-        <div style={dataSectionStyle}>
-          <h2 style={subHeaderStyle}>Alias Response</h2>
-          <pre style={preStyle}>{JSON.stringify(aliasResponse, null, 2)}</pre>
-        </div>
-      )}
-
-      {data ? (
-        <div style={dataSectionStyle}>
-          <h2 style={subHeaderStyle}>Timegraph Data</h2>
-          <pre style={preStyle}>{JSON.stringify(data, null, 2)}</pre>
-        </div>
-      ) : (
-        <p style={loadingStyle}>Result will be displayed here</p>
-      )}
     </div>
   );
 }
-
-const containerStyle = {
-  backgroundColor: "white",
-  padding: "20px",
-  borderRadius: "8px",
-  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-  maxWidth: "600px",
-  margin: "auto",
-  textAlign: "center",
-};
-
-const headerStyle = {
-  color: "#333",
-  marginBottom: "20px",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "15px",
-};
-
-const inputContainerStyle = {
-  marginBottom: "10px",
-};
-
-const labelStyle = {
-  fontWeight: "bold",
-  color: "#555",
-  display: "block",
-  marginBottom: "5px",
-};
-
-const inputStyle = {
-  padding: "10px",
-  borderRadius: "4px",
-  border: "1px solid #ddd",
-  fontSize: "16px",
-  width: "100%",
-};
-
-const buttonStyle = {
-  padding: "10px 15px",
-  borderRadius: "4px",
-  backgroundColor: "#679b40",
-  color: "white",
-  border: "none",
-  cursor: "pointer",
-  fontSize: "16px",
-  transition: "background-color 0.3s ease",
-};
-
-const dataSectionStyle = {
-  marginTop: "20px",
-  textAlign: "left",
-};
-
-const subHeaderStyle = {
-  color: "#444",
-  marginBottom: "10px",
-};
-
-const preStyle = {
-  backgroundColor: "#f9f9f9",
-  padding: "15px",
-  borderRadius: "4px",
-  border: "1px solid #eee",
-  maxHeight: "200px",
-  overflowY: "auto",
-};
-
-const loadingStyle = {
-  color: "#777",
-};
 
 export default App;
